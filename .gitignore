@@ -1,0 +1,11 @@
+# Worm assignment text
+worm-assignment.pdf
+README.html
+
+# Python
+*.pyc
+__pycache__/
+
+# Generated zipped-up files
+*.zip
+*.bin
