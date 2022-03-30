@@ -165,7 +165,9 @@ You may find that a compiled language is a better fit for this project.
 
 #### Worm state must be kept in RAM
 
-The worm must not touch the disk.
+The worm must not touch the disk. You can *read* from the disk. In
+particular, your worm segment executable will most likely need to read
+its own file in order to propagate. But do not write to the disk.
 
 #### The worm must shut down when ordered to do so
 
