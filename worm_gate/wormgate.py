@@ -16,6 +16,7 @@ import sys
 import tempfile
 import threading
 import urllib.parse
+import textwrap
 import time
 
 # Values pulled from environment
@@ -89,6 +90,13 @@ class WormProcess(object):
         os.chmod(self.execfile.name, 0o755)
         self.execfile.close()
         logger.info("Wrote executable to %s", self.execfile.name)
+
+        # Check the file type and contents, for debugging
+        file_type_check = subprocess.run(["file", self.execfile.name], capture_output=True)
+        xxd_head = subprocess.run(f"xxd {self.execfile.name} | head -n 3", shell=True, capture_output=True)
+        logger.info("Executable file type and start of contents...\n%s\n%s",
+                textwrap.indent(file_type_check.stdout.decode("utf-8").strip(), "    "),
+                textwrap.indent(xxd_head.stdout.decode("utf-8").strip(), "    "))
 
         self.cmd = [self.execfile.name] + exec_args
         self.popen_kwargs = {
