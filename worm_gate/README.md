@@ -170,6 +170,48 @@ INFO:myhost:8000-wormgate:Removing executable /dev/shm/inf3203_worm_assignment_6
 127.0.0.1 - - [09/Apr/2022 22:37:44] "POST /kill_worms HTTP/1.1" 200 -
 ```
 
+### Hello Reflection
+
+Your worm segment will need to read its own code in order to replicate.
+In a Unix system, an executable can find itself by examining
+command-line argument zero.
+
+Here is a script that reads itself and quotes its own code back to you,
+`arg0.sh`:
+
+```bash
+#!/bin/bash
+echo "Hello this is the worm"
+echo "My executable file is $0"
+echo "I can read and quote my own code:"
+echo "####################"
+sed 's/^/# /' $0
+echo "####################"
+```
+
+```
+$ curl -X POST 'http://localhost:8000/worm_entrance' --data-binary @arg0.sh
+Worm segment uploaded and started
+```
+
+```
+INFO:myhost:8000-wormgate:Wrote executable to /dev/shm/inf3203_worm_assignment_uz2wi6cf
+INFO:myhost:8000-wormgate:Started subprocess. PID 907917. Command: ['/dev/shm/inf3203_worm_assignment_uz2wi6cf'].
+127.0.0.1 - - [09/Apr/2022 23:29:36] "POST /worm_entrance HTTP/1.1" 200 -
+Hello this is the worm
+My executable file is /dev/shm/inf3203_worm_assignment_uz2wi6cf
+I can read and quote my own code:
+####################
+# #!/bin/bash
+# echo "Hello this is the worm"
+# echo "My executable file is $0"
+# echo "I can read and quote my own code:"
+# echo "####################"
+# sed 's/^/# /' $0
+# echo "####################"
+####################
+```
+
 Running the Worm Gate
 --------------------------------------------------
 
