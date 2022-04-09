@@ -14,6 +14,162 @@ assignment text.
 - **DO NOT RUN THIS CODE ON ANY PUBLIC-FACING COMPUTER.**
 - **DO NOT RUN THIS CODE AS A PRIVILEGED USER.**
 
+Quick Start
+--------------------------------------------------
+
+### Hello Gate
+
+The worm gate is a simple HTTP server.
+
+Here, we start a worm gate server on port 8000:
+
+```
+$ ./wormgate.py --port 8000
+INFO:myhost:8000-wormgate:Starting server on port 8000.
+```
+
+To check that it's running we can `GET /info`:
+
+```
+$ curl -X GET http://localhost:8000/info
+{
+  "msg": "Worm gate running",
+  "servername": "myhost:8000",
+  "numsegments": 0,
+  "other_gates": []
+}
+```
+
+### Hello Worm
+
+The worm gate accepts uploaded binaries and runs them.
+
+Here is a hello-world bash script, `hello.sh`:
+
+```bash
+#!/bin/bash
+echo 'hello world'
+```
+
+To upload and run it, we can `POST` to `/worm_entrance`:
+
+```
+$ curl -X POST http://localhost:8000/worm_entrance --data-binary @hello.sh
+Worm segment uploaded and started
+```
+
+In the worm gate's server log,
+we should see log messages that it is starting the segment process,
+plus the segment process's "hello world" output
+(note: this example log output is simplified):
+
+```
+INFO:myhost:8000-wormgate:Wrote executable to /dev/shm/inf3203_worm_assignment_f2r13jtk
+INFO:myhost:8000-wormgate:Started subprocess. PID 757996. Command: ['/dev/shm/inf3203_worm_assignment_f2r13jtk'].
+127.0.0.1 - - [09/Apr/2022 22:05:34] "POST /worm_entrance HTTP/1.1" 200 -
+hello world
+```
+
+### Hello Args
+
+The worm-entrance API can pass command-line arguments to the segment
+process.
+
+Here is a bash script that repeats its arguments, `echo_args.sh`:
+
+```bash
+#!/bin/bash
+echo "Hello args" "$@"
+```
+
+We pass parameters by adding query parameters to the URL
+(be sure to quote the URL because `&` is a command character in bash):
+
+```
+$ curl -X POST 'http://localhost:8000/worm_entrance?args=1&args=2&args=3' --data-binary @echo_args.sh
+Worm segment uploaded and started
+```
+
+The arguments should be visible in the server log (output simplified):
+
+```
+INFO:myhost:8000-wormgate:Wrote executable to /dev/shm/inf3203_worm_assignment_769jhf6_
+INFO:myhost:8000-wormgate:Started subprocess. PID 776856. Command: ['/dev/shm/inf3203_worm_assignment_769jhf6_', '1', '2', '3'].
+127.0.0.1 - - [09/Apr/2022 22:16:07] "POST /worm_entrance?args=1&args=2&args=3 HTTP/1.1" 200 -
+Hello args 1 2 3
+```
+
+### Goodbye Worm
+
+The worm gate can kill worm segments.
+
+Here is a bash script that never ends, `forever.sh`:
+
+```bash
+#!/bin/bash
+while true; do
+    echo "I am still running"
+    sleep 2
+done
+```
+
+#### Upload and run
+
+```
+$ curl -X POST 'http://localhost:8000/worm_entrance' --data-binary @forever.sh
+Worm segment uploaded and started
+```
+
+```
+INFO:myhost:8000-wormgate:Wrote executable to /dev/shm/inf3203_worm_assignment_6itkwgn2
+INFO:myhost:8000-wormgate:Started subprocess. PID 814861. Command: ['/dev/shm/inf3203_worm_assignment_6itkwgn2'].
+127.0.0.1 - - [09/Apr/2022 22:37:35] "POST /worm_entrance HTTP/1.1" 200 -
+I am still running
+I am still running
+```
+
+#### Check
+
+The `GET /info` call shows that one segment is running:
+
+```
+$ curl -X GET http://localhost:8000/info
+{
+  "msg": "Worm gate running",
+  "servername": "myhost:8000",
+  "numsegments": 1,
+  "other_gates": []
+}
+```
+
+```
+I am still running
+127.0.0.1 - - [09/Apr/2022 22:37:38] "GET /info HTTP/1.1" 200 -
+I am still running
+```
+
+#### Kill
+
+To kill the segment, we can use `POST` to `/kill_worms`:
+
+```
+$ curl -X POST 'http://localhost:8000/kill_worms'
+{
+  "msg": "Child processes killed",
+  "exitcodes": [
+    -15
+  ]
+}
+```
+
+```
+I am still running
+I am still running
+INFO:myhost:8000-wormgate:WormProcess{PID=814861} still running, terminating
+INFO:myhost:8000-wormgate:Removing executable /dev/shm/inf3203_worm_assignment_6itkwgn2
+127.0.0.1 - - [09/Apr/2022 22:37:44] "POST /kill_worms HTTP/1.1" 200 -
+```
+
 Running the Worm Gate
 --------------------------------------------------
 
@@ -120,57 +276,54 @@ Specifically, this call will:
 Reminder that this is an astoundingly unsafe thing to do.
 **Do not run this code on any public-facing computer.**
 
-Here is an example request that posts a two-line bash script.
-You should see "Hello world" printed in the server's standard output.
+#### Request body becomes worm executable
 
-```bash
-curl -X POST http://localhost:8000/worm_entrance \
-        -d '#!/bin/bash'$'\n''echo "Hello world"'
+The body of the request becomes the executed binary.
+Use raw data (e.g. curl `--data-binary`),
+not form data (e.g. curl `--form`).
+Example curl line:
+
+```
+curl -X POST http://localhost:8000/worm_entrance --data-binary @segment.exe
 ```
 
-To pass arguments to the script, add them as `args` query parameters
-to the HTTP request.
-This is a two-line bash script that prints its arguments in reverse
-order. You should see "three two one" printed in the server's standard
-output.
+#### Query parameter `args` becomes command-line arguments
 
-```bash
-curl -X POST 'http://localhost:8000/worm_entrance?args=one&args=two&args=three' \
-        -d '#!/bin/bash'$'\n''echo "$3 $2 $1"'
+Add an `args` query parameter to pass a command-line argument to the
+worm segment executable. Repeat it to add more arguments.
+
+| Query string             |   | Command line              |
+|--------------------------|---|---------------------------|
+| `?args=hello`            | → | `segment.exe hello`       |
+| `?args=hello&args=world` | → | `segment.exe hello world` |
+| `?args=--port&args=9000` | → | `segment.exe --port 9000` |
+
+
+Example curl line:
+
+```
+curl -X POST 'http://localhost:8000/worm_entrance?args=--port&args=9000' \
+    --data-binary @segment.exe
+```
+
+The binary `segment.exe` will be uploaded and executed like:
+
+```
+./segment.exe --port 9000
 ```
 
 ### POST /kill\_worms --- Kill child worm processes
 
-This example worm will keep running, printing "I am still running" to
-stdout every 2 seconds.
+This call will simply kill any worm segment processes that the worm
+gate has started.
 
-```bash
-curl -X POST http://localhost:8000/worm_entrance \
-        -d '#!/bin/bash'$'\n''while true; do echo "I am still running"; sleep 2; done'
-```
+1. The worm gate will send SIGTERM to each worm segment process.
+2. It will wait a few seconds.
+3. Any worm processes that are still running will be forcefully
+    killed with SIGKILL.
 
-If you check the worm gate status you will see that it is still running.
-
-```bash
-curl -X GET http://localhost:8000/info
-```
-
-```json
-{
-  "msg": "Worm gate running",
-  "servername": "localhost:8000",
-  "numsegments": 1
-}
-```
-
-Now you can kill the process by POST-ing to `/kill_worms`
-
-```bash
-curl -X POST http://localhost:8000/kill_worms
-```
-
-This will return a JSON that includes the exit codes of processes
-killed.
+The response will be a JSON object with info about the exit codes
+of the worm segment processes:
 
 ```json
 {
@@ -180,12 +333,6 @@ killed.
   ]
 }
 ```
-
-Negative exit codes indicate that they were killed via POSIX signal,
-so -15 indicates that the process was killed via SIGTERM.
-The worm gate will try SIGTERM first.
-If the worm gate doesn't stop quickly, then it will use SIGKILL,
-resulting in an exit code of -9.
 
 Packaging Python Code to a Single Executable File
 --------------------------------------------------
@@ -204,8 +351,9 @@ and the hello-world example here in the
 [`python_zip_example/`](../python_zip_example/)
 directory.
 
-(Reminder: you can use any language you like for your worm, as long as
-you can get it working in the worm gate on the cluster.)
+(Reminder that you can use any language you like for your worm, as long
+as you can get it working in the worm gate on the cluster.
+You may find that a compiled language is a better fit for this project.)
 
 Once you create your executable (in the example, `hello_world.bin`),
 you can upload it to a running worm gate:
