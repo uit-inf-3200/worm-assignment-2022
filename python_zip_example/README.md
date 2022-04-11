@@ -38,6 +38,18 @@ Execution starts with the file `hello_world/__main__.py` .
 We can run the project by pointing Python at the directory:
 
 ```bash
+# Contents
+$ tree hello_world/
+hello_world/
+├── example_module.py
+├── __main__.py
+└── resources
+    ├── example_resource.txt
+    └── __init__.py
+
+1 directory, 4 files
+
+# Output
 $ python3 hello_world/
 Hello, World!
 This string comes from hello_world/example_module.py.
