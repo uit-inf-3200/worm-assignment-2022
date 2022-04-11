@@ -150,7 +150,7 @@ I am still running
 
 #### Kill
 
-To kill the segment, we can use `POST` to `/kill_worms`:
+To kill the segment, we can `POST` to `/kill_worms`:
 
 ```
 $ curl -X POST 'http://localhost:8000/kill_worms'
@@ -387,8 +387,8 @@ as one executable.
 If you are using Python, you can zip up a code directory into a zip
 file and then add a magic prefix to make it an executable.
 See the tutorial
-"[A Simple Guide to Python Packaging](https://medium.com/small-things-about-python/lets-talk-about-python-packaging-6d84b81f1bb5)"
-by Jie Feng,
+"[Execute a Directory/Zip File in Python](https://medium.com/python-features/execute-a-directory-zip-file-in-python-3c33c26cec30)"
+by Rachit Tayal
 and the hello-world example here in the
 [`python_zip_example/`](../python_zip_example/)
 directory.

@@ -7,13 +7,15 @@ default: worm-assignment.pdf ../README.md \
 
 PDF_OPTS := --citeproc
 
-# Note that --standalone is necessary to render the toc and the header-includes.
-# However, --standalone also preserves the YAML block at the top, and GitHub
-# now renders that block in an ugly horizontal table at the top of the README.
-# To avoid the ugly table, turn off the 'yaml_metadata_block' extension in the
-# output format.
+# For the GitHub-flavored README.md from the more featureful Pandoc Markdown
+
+# Standalone is necessary to render the table of contents
 README_OPTS := --standalone --toc --citeproc
-README_OPTS += --shift-heading-level-by=1 --to gfm-yaml_metadata_block
+# Shift headings one size smaller to all fit under the main h1 for the page
+README_OPTS += --shift-heading-level-by=1
+# Output as GitHub-flavored Markdown, minus the YAML metadata block
+# (which GitHub now shows as a big ugly table at the top of the page)
+README_OPTS += --to gfm-yaml_metadata_block
 
 worm-assignment.pdf: worm-assignment.md $(wildcard *.bib) $(wildcard *.csl)
 	pandoc $(PDF_OPTS) $< -o $@
@@ -21,5 +23,6 @@ worm-assignment.pdf: worm-assignment.md $(wildcard *.bib) $(wildcard *.csl)
 ../README.md: worm-assignment.md $(wildcard *.bib) $(wildcard *.csl)
 	pandoc $(README_OPTS) $< -o $@
 
+# For the READMEs, create a preview HTML to check the rendering
 %.html: %.md
-	pandoc --from gfm $< -o $@
+	pandoc --standalone --from gfm $< -o $@
