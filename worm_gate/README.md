@@ -392,7 +392,7 @@ Worm Gate HTTP API
 A simple get to check that the server is running. Example:
 
 ```bash
-curl -X GET http://localhost:8000/info
+$ curl -X GET http://localhost:8000/info
 ```
 
 This will return a status JSON, similar to this:
@@ -439,8 +439,8 @@ Use raw data (e.g. curl `--data-binary`),
 not form data (e.g. curl `--form`).
 Example curl line:
 
-```
-curl -X POST http://localhost:8000/worm_entrance --data-binary @segment.exe
+```bash
+$ curl -X POST http://localhost:8000/worm_entrance --data-binary @segment.exe
 ```
 
 #### Query parameter `args` becomes command-line arguments
@@ -457,8 +457,8 @@ worm segment executable. Repeat it to add more arguments.
 
 Example curl line:
 
-```
-curl -X POST 'http://localhost:8000/worm_entrance?args=--port&args=9000' \
+```bash
+$ curl -X POST 'http://localhost:8000/worm_entrance?args=--port&args=9000' \
     --data-binary @segment.exe
 ```
 
@@ -477,6 +477,12 @@ gate has started.
 2. It will wait a few seconds.
 3. Any worm processes that are still running will be forcefully
     killed with SIGKILL.
+
+Example curl line:
+
+```bash
+$ curl -X POST 'http://localhost:8000/kill_worms'
+```
 
 The response will be a JSON object with info about the exit codes
 of the worm segment processes:
@@ -516,9 +522,9 @@ you can upload it to a running worm gate:
 
 ```bash
 # Start a worm gate
-python3 wormgate.py -p 8000 &
+$ python3 wormgate.py -p 8000 &
 # Upload the zipped binary
-curl -X POST http://localhost:8000/worm_entrance \
+$ curl -X POST http://localhost:8000/worm_entrance \
     --data-binary @../python_zip_example/hello_world.bin
 ```
 
