@@ -23,14 +23,14 @@ The worm gate is a simple HTTP server.
 
 Here, we start a worm gate server on port 8000:
 
-```
+```bash
 $ ./wormgate.py --port 8000
 INFO:myhost:8000-wormgate:Starting server on port 8000.
 ```
 
 To check that it's running we can `GET /info`:
 
-```
+```bash
 $ curl -X GET http://localhost:8000/info
 {
   "msg": "Worm gate running",
@@ -53,7 +53,7 @@ echo 'hello world'
 
 To upload and run it, we can `POST` to `/worm_entrance`:
 
-```
+```bash
 $ curl -X POST http://localhost:8000/worm_entrance --data-binary @hello.sh
 Worm segment uploaded and started
 ```
@@ -85,7 +85,7 @@ echo "Hello args" "$@"
 We pass parameters by adding query parameters to the URL
 (be sure to quote the URL because `&` is a command character in bash):
 
-```
+```bash
 $ curl -X POST 'http://localhost:8000/worm_entrance?args=1&args=2&args=3' --data-binary @echo_args.sh
 Worm segment uploaded and started
 ```
@@ -115,7 +115,7 @@ done
 
 #### Upload and run
 
-```
+```bash
 $ curl -X POST 'http://localhost:8000/worm_entrance' --data-binary @forever.sh
 Worm segment uploaded and started
 ```
@@ -132,7 +132,7 @@ I am still running
 
 The `GET /info` call shows that one segment is running:
 
-```
+```bash
 $ curl -X GET http://localhost:8000/info
 {
   "msg": "Worm gate running",
@@ -152,7 +152,7 @@ I am still running
 
 To kill the segment, we can `POST` to `/kill_worms`:
 
-```
+```bash
 $ curl -X POST 'http://localhost:8000/kill_worms'
 {
   "msg": "Child processes killed",
@@ -189,7 +189,7 @@ sed 's/^/# /' $0
 echo "####################"
 ```
 
-```
+```bash
 $ curl -X POST 'http://localhost:8000/worm_entrance' --data-binary @arg0.sh
 Worm segment uploaded and started
 ```
@@ -220,7 +220,9 @@ The worm gate is an HTTP server written in Python (version 3).
 The whole program is contained in one script, `wormgate.py`.
 Run it with `python3`, or set the executable bit and run it directly.
 
-    python3 wormgate.py --port 8000
+```bash
+$ python3 wormgate.py --port 8000
+```
 
 The `--port` option is required.
 For local testing, you will need to use different ports to run multiple
@@ -233,7 +235,9 @@ The worm gate keeps a list of other worm gates that are accessible.
 This list is available to via the `/info` API.
 To set that list, list running worm gate hosts on the command line:
 
-    python3 wormgate.py --port 8000 localhost:8081 localhost:8082
+```bash
+$ python3 wormgate.py --port 8000 localhost:8081 localhost:8082
+```
 
 The worm gate will filter its own name out of this list.
 So if you're starting worm gates with a simple script,
@@ -253,7 +257,9 @@ There are a few other command line options to set things like the server
 log level, etc.
 To get a list of options, run with the `--help` option:
 
-    python3 wormgate.py --help
+```bash
+$ python3 wormgate.py --help
+```
 
 Helper Scripts
 --------------------------------------------------
