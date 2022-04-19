@@ -411,10 +411,10 @@ This will return a status JSON, similar to this:
 
 Elements:
 
-- **`servername`**: the host:port of this worm gate server
-- **`numsegments`**: the number of segments running on this worm gate
-- **`other_gates`**: other worm gate host:port pairs (as listed on
-  commend line at startup)
+- **`servername`** (string): the host:port of this worm gate server
+- **`numsegments`** (number): the number of segments running on this worm gate
+- **`other_gates`** (array of strings): other worm gate host:port pairs
+  (as listed on commend line at startup)
 
 Your worm may use this information to decide where to propagate to next.
 
