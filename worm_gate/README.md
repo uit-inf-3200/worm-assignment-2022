@@ -255,7 +255,8 @@ To get a list of options, run with the `--help` option:
 
     python3 wormgate.py --help
 
-### Helper Scripts
+Helper Scripts
+--------------------------------------------------
 
 The repository also includes a few helper scripts for starting and
 stopping worm gates:
@@ -269,6 +270,113 @@ stopping worm gates:
     --- A merciless worm cleanup.
         Kills all of your process on the cluster,
         plus removes temporary worm segment files
+
+### Piping Input to wormgates\_start.sh and wormgates\_kill.sh
+
+The matching `wormgates_start.sh` and `wormgates_kill.sh` scripts take
+their lists via standard input. The idea is that you can have a list
+of HOST:PORT pairs in a text file and then pipe it into the scripts.
+
+For example, here is a one-liner that creates a list of three
+localhost:port pairs with random ports from the ephemeral port range:
+
+```bash
+$ shuf -i 49152-65535 -n 3 | sed 's/^/localhost:/'
+localhost:65140
+localhost:56844
+localhost:60846
+```
+
+We can save that as a text file, and use it to start our worm gates
+(output simplified):
+
+```bash
+$ shuf -i 49152-65535 -n 3 | sed 's/^/localhost:/' > host_list.txt
+$ cat host_list.txt | ./wormgates_start.sh
+localhost:54176 -- + ./wormgate.py -p 54176 localhost:54176 localhost:62137 localhost:57040
+localhost:62137 -- + ./wormgate.py -p 62137 localhost:54176 localhost:62137 localhost:57040
+localhost:57040 -- + ./wormgate.py -p 57040 localhost:54176 localhost:62137 localhost:57040
+INFO:myhost:54176-wormgate:Starting server on port 54176.
+INFO:myhost:62137-wormgate:Starting server on port 62137.
+INFO:myhost:57040-wormgate:Starting server on port 57040.
+```
+
+The script's output shows the command lines it uses to start each gate
+(after the "`-- +`" characters). We can also see how it passes all of
+the other host:port pairs to each worm gate at start up. If the host
+names are anything besides `localhost`, the script will use `ssh` to
+start the gate on the appropriate host rather than executing it locally
+(output simplified):
+
+```bash
+[mmu019@uvcluster worm_gate]$ cat host_list.txt | ./wormgates_start.sh
+compute-1-1:60000 -- + ssh -f compute-1-1 ./wormgate.py -p 60000 compute-1-1:60000 compute-2-1:60000 compute-3-1:60000
+compute-2-1:60000 -- + ssh -f compute-2-1 ./wormgate.py -p 60000 compute-1-1:60000 compute-2-1:60000 compute-3-1:60000
+compute-3-1:60000 -- + ssh -f compute-3-1 ./wormgate.py -p 60000 compute-1-1:60000 compute-2-1:60000 compute-3-1:60000
+INFO:compute-1-1:60000-wormgate:Starting server on port 60000.
+INFO:compute-3-1:60000-wormgate:Starting server on port 60000.
+INFO:compute-2-1:60000-wormgate:Starting server on port 60000.
+```
+
+### Passing Additional Worm Gate Arguments
+
+Any additional arguments on the `./wormgates_start.sh` command line
+will be passed to the worm gates between the `-p` port argument and the
+list of host:port pairs. To decrease the log level for all launched
+worm gates, we can add the `--loglevel` argument (output simplified):
+
+```bash
+$ cat host_list.txt | ./wormgates_start.sh --loglevel WARN
+localhost:54176 -- + ./wormgate.py -p 54176 --loglevel WARN localhost:54176 localhost:62137 localhost:57040
+# (...and so on...)
+```
+
+### Kill, Kill, Kill!
+
+The `wormgates_kill.sh` script takes its input via pipe in the same way,
+though this time there are no additional arguments to pass.
+(output simplified):
+
+```bash
+$ cat host_list.txt | ./wormgates_kill.sh
+localhost:54176 -- + pkill -f wormgate.py
+localhost:62137 -- + pkill -f wormgate.py
+localhost:57040 -- + pkill -f wormgate.py
+INFO:myhost:54176-wormgate:Got system signal 15, SIGTERM.
+INFO:myhost:62137-wormgate:Got system signal 15, SIGTERM.
+INFO:myhost:57040-wormgate:Got system signal 15, SIGTERM.
+```
+
+And, like the startup script, it will use SSH if the hostname is not
+`localhost` (output simplified):
+
+```bash
+[mmu019@uvcluster worm_gate]$ cat host_list.txt | ./wormgates_kill.sh
+compute-1-1:60000 -- + ssh -f compute-1-1 pkill -f wormgate.py
+compute-2-1:60000 -- + ssh -f compute-2-1 pkill -f wormgate.py
+compute-3-1:60000 -- + ssh -f compute-3-1 pkill -f wormgate.py
+INFO:compute-1-1:60000-wormgate:Got system signal 15, SIGTERM.
+INFO:compute-2-1:60000-wormgate:Got system signal 15, SIGTERM.
+INFO:compute-3-1:60000-wormgate:Got system signal 15, SIGTERM.
+```
+
+### "I say we take off and nuke the site from orbit": cluster\_kill.sh
+
+The `cluster_kill.sh` script only works on the cluster. It takes no
+arguments because it is much more aggressive. It uses `ssh` to go into
+every node in the cluster one by one and kill every process owned by
+your user (output simplified):
+
+```bash
+$ ./cluster_kill.sh
+Connection to compute-3-0 closed by remote host.
+Connection to compute-3-0 closed by remote host.
+# (...and so on...)
+```
+
+The "connection closed by remote host" messages show up because the kill
+command kills all user processes on the host, including the SSH session.
+It's normal to see a lot of them.
 
 Worm Gate HTTP API
 --------------------------------------------------
