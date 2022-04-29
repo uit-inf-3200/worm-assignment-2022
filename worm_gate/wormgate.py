@@ -239,36 +239,46 @@ class HttpRequestHandler(http.server.BaseHTTPRequestHandler):
             # Transfer-Encoding takes precedence over Content-Length,
             # so we check it first.
             #
-            # To emulate with curl for testing, use
+            # To get curl to use chunked encoding, add this header:
             #   curl -H "Transfer-Encoding: chunked"
             logger.debug("Request was sent with Transfer-Encoding: chunked. Reading chunks.")
             content = io.BytesIO()
             i = 0
             while True:
+                # Each chunk starts with a line telling the chunk's length.
                 chunk_len = self.rfile.readline()
                 logger.debug("Chunk %d: length line = %s", i, chunk_len)
                 chunk_len = int(chunk_len.decode().strip(), base=16)
                 logger.debug("Chunk %d: length = %d", i, chunk_len)
+                # A length of zero indicates end of chunks.
                 if chunk_len == 0:
                     break
 
+                # Read the chunk.
                 chunk_remain = chunk_len
                 while chunk_remain > 0:
                     data = self.rfile.read(chunk_remain)
                     chunk_remain = chunk_remain - len(data)
                     content.write(data)
 
+                # Each chunk is follued by a blank line.
                 self.rfile.readline()
                 i = i + 1
 
             content = content.getvalue()
-            logger.debug("Read %d content bytes in %d chunks", len(content), i)
+            logger.debug("Read %d payload bytes in %d chunks", len(content), i)
 
         elif content_length:
             content_length = int(content_length)
             content = self.rfile.read(content_length)
+            logger.debug("Read %d payload bytes", len(content))
 
         else:
+            # Unsupported Transfer-Encoding and no Content-Length
+            #
+            # To create such a request in curl, clear the Content-Length header
+            # without specifying a Transfer-Encoding:
+            #   curl -H "Content-Length:"
             msg = "Unsupported encoding/length. Transfer-Encoding: %s; Content-Length: %s" % (transfer_encoding, content_length)
             logger.error(msg)
             self.send_whole_response(400, msg + "\n")
