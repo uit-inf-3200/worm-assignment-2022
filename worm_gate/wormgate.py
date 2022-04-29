@@ -239,6 +239,9 @@ class HttpRequestHandler(http.server.BaseHTTPRequestHandler):
             # Transfer-Encoding takes precedence over Content-Length,
             # so we check it first.
             #
+            # Chunked encoding is described in RFC 7230, section 4.1:
+            #   https://datatracker.ietf.org/doc/html/rfc7230#section-4.1
+            #
             # To get curl to use chunked encoding, add this header:
             #   curl -H "Transfer-Encoding: chunked"
             logger.debug("Request was sent with Transfer-Encoding: chunked. Reading chunks.")
