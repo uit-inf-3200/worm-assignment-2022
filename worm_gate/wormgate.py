@@ -3,6 +3,7 @@
 import argparse
 import atexit
 import http.server
+import io
 import json
 import logging
 import os
@@ -215,8 +216,63 @@ class HttpRequestHandler(http.server.BaseHTTPRequestHandler):
         path_path = parsed_path.path
         qs = urllib.parse.parse_qs(parsed_path.query)
 
-        content_length = int(self.headers.get('content-length', 0))
-        content = self.rfile.read(content_length)
+        # Determine length of request
+        #
+        # See RFC 7230 - HTTP/1.1 Message Syntax and Routing, especially...
+        #
+        # Section 3.3.2 Content-Length
+        #   https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
+        # Section 3.3.3 Message Body Length
+        #   https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.3
+        #
+        # Setting the Content-Length header is the most common,
+        # but some clients use "Transfer-Encoding: chunked",
+        # notably Go's http.Client.
+        #
+        # BaseHTTPRequestHandler does not handle any of this for us.
+        # Naively reading 'rfile' will just hang while it looks for EOF.
+
+        content_length = self.headers.get('Content-Length', None)
+        transfer_encoding = self.headers.get('Transfer-Encoding', None)
+
+        if transfer_encoding == "chunked":
+            # Transfer-Encoding takes precedence over Content-Length,
+            # so we check it first.
+            #
+            # To emulate with curl for testing, use
+            #   curl -H "Transfer-Encoding: chunked"
+            logger.debug("Request was sent with Transfer-Encoding: chunked. Reading chunks.")
+            content = io.BytesIO()
+            i = 0
+            while True:
+                chunk_len = self.rfile.readline()
+                logger.debug("Chunk %d: length line = %s", i, chunk_len)
+                chunk_len = int(chunk_len.decode().strip(), base=16)
+                logger.debug("Chunk %d: length = %d", i, chunk_len)
+                if chunk_len == 0:
+                    break
+
+                chunk_remain = chunk_len
+                while chunk_remain > 0:
+                    data = self.rfile.read(chunk_remain)
+                    chunk_remain = chunk_remain - len(data)
+                    content.write(data)
+
+                self.rfile.readline()
+                i = i + 1
+
+            content = content.getvalue()
+            logger.debug("Read %d content bytes in %d chunks", len(content), i)
+
+        elif content_length:
+            content_length = int(content_length)
+            content = self.rfile.read(content_length)
+
+        else:
+            msg = "Unsupported encoding/length. Transfer-Encoding: %s; Content-Length: %s" % (transfer_encoding, content_length)
+            logger.error(msg)
+            self.send_whole_response(400, msg + "\n")
+            return
 
         if path_path == "/worm_entrance":
             exec_bin = content
