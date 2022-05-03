@@ -277,17 +277,22 @@ class HttpRequestHandler(http.server.BaseHTTPRequestHandler):
             logger.debug("Read %d payload bytes", len(content))
 
         else:
-            # Unsupported Transfer-Encoding and no Content-Length
-            #
-            # To create such a request in curl, clear the Content-Length header
-            # without specifying a Transfer-Encoding:
-            #   curl -H "Content-Length:"
-            msg = "Unsupported encoding/length. Transfer-Encoding: %s; Content-Length: %s" % (transfer_encoding, content_length)
-            logger.error(msg)
-            self.send_whole_response(400, msg + "\n")
-            return
+            # Either no request payload, or unsupported Transfer-Encoding.
+            content = bytearray()
 
         if path_path == "/worm_entrance":
+            if not content:
+                # No request payload, or unsupported Transfer-Encoding
+                #
+                # To create such a request in curl, simply don't include a
+                # payload. Or, specify a playload but clear the Content-Length
+                # header without specifying a Transfer-Encoding:
+                #   curl -H "Content-Length:"
+                msg = "No worm payload detected with request. Transfer-Encoding: %s; Content-Length: %s" % (transfer_encoding, content_length)
+                logger.error(msg)
+                self.send_whole_response(400, msg + "\n")
+                return
+
             exec_bin = content
             exec_args = qs["args"] if "args" in qs else []
 

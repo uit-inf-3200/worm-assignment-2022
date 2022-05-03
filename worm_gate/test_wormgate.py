@@ -207,7 +207,16 @@ class TestHttp(unittest.TestCase):
         curl_cmd = curl_cmd + ["-H", "Content-Length:"]
         self.do_upload_test(curl_cmd,
                 expect_response_code=400,
-                expect_in_log="Unsupported encoding/length")
+                expect_in_log="No worm payload")
+
+    def test_post_no_payload(self):
+        curl_cmd = "curl -v -X POST http://localhost:8000/kill_worms".split()
+        # The worms_kill resource takes no payload on POST.
+        # This is a valid time for the request to have no Content-Length or
+        # Transfer-Encoding headers. The server must also handle this without
+        # an error.
+        self.do_upload_test(curl_cmd,
+                expect_response_code=200)
 
 if __name__ == "__main__":
     unittest.main()
